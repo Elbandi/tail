@@ -240,7 +240,18 @@ func (tail *Tail) tailFileSync() {
 
 	// Seek to requested location on first open of the file.
 	if tail.Location != nil {
-		_, err := tail.file.Seek(tail.Location.Offset, tail.Location.Whence)
+		stat, err := tail.file.Stat()
+		if err != nil {
+			tail.Killf("Stat error on %s: %s", tail.Filename, err)
+			return
+		}
+		var offset int64
+		if tail.Location.Offset < -stat.Size() {
+			offset = -stat.Size()
+		} else {
+			offset = tail.Location.Offset
+		}
+		_, err = tail.file.Seek(offset, tail.Location.Whence)
 		tail.Logger.Printf("Seeked %s - %+v\n", tail.Filename, tail.Location)
 		if err != nil {
 			tail.Killf("Seek error on %s: %s", tail.Filename, err)
